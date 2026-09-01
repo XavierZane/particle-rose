@@ -50,7 +50,14 @@ npm run dev
 PARTICLE_ROSE_PORT=5175 ./start-particle-rose.sh
 ```
 
-启动日志保存在 `.particle-rose.log`，运行中的 PID 保存在 `.particle-rose.pid`。这两个文件不会提交到 Git。
+在 Windows 中，双击以下脚本即可使用：
+
+- `start-particle-rose.bat`：启动 Vite 服务，等待 `5174` 端口就绪后打开 Chrome（未安装 Chrome 时使用系统默认浏览器）。
+- `stop-particle-rose.bat`：停止该启动脚本创建的 Vite 进程树。
+
+Windows 脚本需要已安装 Node.js/npm，并使用 PowerShell 执行；脚本仅针对记录在 `.particle-rose.pid` 中的项目进程。启动日志保存在 `.particle-rose.log`，错误日志保存在 `.particle-rose.error.log`。
+
+运行中的 PID 保存在 `.particle-rose.pid`。这些运行时文件不会提交到 Git。
 
 ## 手势和交互
 
