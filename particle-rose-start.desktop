@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Start Particle Rose
+Comment=Start the local Particle Rose page in Chrome
+Exec=/home/xavier/lizi/start-particle-rose.sh
+Path=/home/xavier/lizi
+Terminal=false
+Categories=Development;

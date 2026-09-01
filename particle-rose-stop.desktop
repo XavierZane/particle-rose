@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Stop Particle Rose
+Comment=Stop the local Particle Rose development server
+Exec=/home/xavier/lizi/stop-particle-rose.sh
+Path=/home/xavier/lizi
+Terminal=false
+Categories=Development;
