@@ -84,6 +84,8 @@ npm run build
 
 项目的图片处理、粒子渲染和手势识别均在浏览器端完成，不包含后端、账号、云端存储或图片上传接口。
 
-## 许可和模型资源
+## 许可证和第三方资源
 
-仓库中的 MediaPipe 模型与 WASM 文件来自 `@mediapipe/tasks-vision` 的浏览器运行时资源。发布前请根据你的分发方式确认相关第三方许可要求。
+本项目原创源代码使用 [MIT License](./LICENSE) 发布。
+
+仓库中的 MediaPipe 模型与 WASM 文件属于第三方资源，不在本项目 MIT 许可证的重新授权范围内。`@mediapipe/tasks-vision` npm 包采用 Apache-2.0 许可证；再分发这些资源时，请同时遵守 MediaPipe 和相关模型资源的上游许可与署名要求。
