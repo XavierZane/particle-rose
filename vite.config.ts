@@ -36,6 +36,8 @@ function mediaPipeWasmDevPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [mediaPipeWasmDevPlugin(), react()],
+  // GitHub Pages serves this project below /particle-rose/; local dev stays at /.
+  base: process.env.GITHUB_ACTIONS === 'true' ? '/particle-rose/' : '/',
   server: {
     host: true,
     port: 5173,
