@@ -17,8 +17,9 @@ type WorkerResponse =
   | { type: 'result'; landmarks: Landmark[]; confidence: number; timestamp: number }
   | { type: 'error' | 'frameError'; message: string };
 
-const WASM_PATH = '/mediapipe/wasm';
-const MODEL_PATH = '/mediapipe/models/hand_landmarker.task';
+const ASSET_BASE = import.meta.env.BASE_URL;
+const WASM_PATH = `${ASSET_BASE}mediapipe/wasm`;
+const MODEL_PATH = `${ASSET_BASE}mediapipe/models/hand_landmarker.task`;
 const INFERENCE_INTERVAL = 1000 / 28;
 
 export const EMPTY_GESTURE: GestureSnapshot = {
