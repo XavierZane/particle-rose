@@ -1,5 +1,5 @@
 import type { ParticleTarget } from '../types';
-import { centerPositions, createTargetArrays, normalizeVector, writeScatter, writeVector } from '../particle/targetUtils';
+import { calculateBounds, centerPositions, createTargetArrays, normalizeVector, writeScatter, writeVector } from '../particle/targetUtils';
 
 function seededRandom(seed: number) {
   let state = seed >>> 0;
@@ -63,7 +63,11 @@ export function createRoseTarget(count: number): ParticleTarget {
   const layerTops = [2.16, 1.96, 2.08, 2.15, 2.1];
   const sharedRootY = 0.91;
   const spiralTwists = [1.18, 0.82, 0.5, 0.3, 0.2];
-  const depthBias = [0.18, 0.12, 0.035, -0.06, -0.12];
+  // Front/back layering: inner petals lean toward the viewer, outer petals
+  // lean back. The values are balanced so the layer-weighted mean is ~zero —
+  // otherwise every petal root drifts off the shared axis in +z and the
+  // calyx no longer converges to one point.
+  const depthBias = [0.14, 0.08, -0.02, -0.1, -0.17];
 
   for (let index = 0; index < count; index += 1) {
     let x = 0;
@@ -84,9 +88,14 @@ export function createRoseTarget(count: number): ParticleTarget {
       // Round-robin assignment guarantees every petal receives a complete patch.
       const petalIndex = localIndex % petalCount;
       const baseAngle = safeLayer * 0.47 + petalIndex * Math.PI * 2 / petalCount;
-      const u = safeLayer === 0
-        ? 0.04 + random() * 0.8
+      // Petals attach across a small receptacle instead of all starting at one
+      // mathematical point. A point root turns the lower edges into long red
+      // spikes whenever the flower is viewed from the side.
+      const rootInset = [0.07, 0.09, 0.11, 0.13, 0.15][safeLayer];
+      const sampledU = safeLayer === 0
+        ? random() * 0.8
         : Math.pow(random(), safeLayer < 2 ? 0.86 : 0.72);
+      const u = rootInset + sampledU * (1 - rootInset);
       const v = random() * 2 - 1;
       const heightProgress = Math.pow(u, 0.9);
       const twist = (u - 0.18) * spiralTwists[safeLayer];
@@ -97,15 +106,18 @@ export function createRoseTarget(count: number): ParticleTarget {
       // Hold the corolla close to the calyx for longer before it reaches the
       // broad shoulder. This makes the lower fifth visibly narrower without
       // changing the dense core volume above it.
-      const lowerTaper = smoothStep01(u / 0.4);
-      // Every petal starts at the same narrow head root. Its cross-section,
-      // tangent width, and front/back depth then open together as it rises.
+      const lowerTaper = smoothStep01(u / 0.45);
+      // Keep a small rounded base at the receptacle, then open the petal
+      // cross-section and tangent width together as it rises.
       const halfWidth = (0.018 + 0.36 * lowerTaper) * layerScale[safeLayer];
       const halfDepth = (0.018 + 0.28 * lowerTaper) * layerScale[safeLayer];
+      const baseRadius = 0.045 + safeLayer * 0.012;
+      const crownFlare = 1 + 0.4 * smoothStep01((u - 0.86) / 0.14);
       const squareEdgeRadius = squareRadius(angle, halfWidth, halfDepth)
-        * (0.18 + 0.82 * lowerTaper);
+        * (baseRadius + (1 - baseRadius) * Math.pow(lowerTaper, 1.12))
+        * crownFlare;
       const width = petalWidths[safeLayer]
-        * (0.14 + 0.86 * lowerTaper)
+        * (0.1 + 0.9 * Math.pow(lowerTaper, 1.35))
         * (0.7 + 0.16 * Math.sin(Math.PI * u));
       const tangentOffset = v * width;
       if (safeLayer === 0) {
@@ -113,7 +125,8 @@ export function createRoseTarget(count: number): ParticleTarget {
         // strips around an empty axis.
         const coreRadius = (0.018 + 0.3 * heightProgress)
           * Math.sqrt(random())
-          * (0.18 + 0.82 * lowerTaper);
+          * (0.12 + 0.88 * lowerTaper)
+          * crownFlare;
         x = Math.cos(angle) * coreRadius - Math.sin(angle) * tangentOffset * 0.55;
         z = Math.sin(angle) * coreRadius + Math.cos(angle) * tangentOffset * 0.55
           + depthBias[safeLayer] * lowerTaper;
@@ -130,9 +143,8 @@ export function createRoseTarget(count: number): ParticleTarget {
       const edgeLift = Math.abs(v) ** 1.35 * (0.025 + safeLayer * 0.012) * lowerTaper;
       const verticalFold = Math.sin(angle * 2 + u * 5 + petalIndex) * 0.012 * lowerTaper;
       const verticalProgress = smoothStep01(Math.min(1, u / 0.84));
-      // Layer bases describe the upper fold of each petal, not independent
-      // attachment points. Blend them in only after leaving the shared root
-      // so every petal begins at the same Y before it separates vertically.
+      // Layer bases describe the upper fold of each petal. Blending them from
+      // the receptacle keeps the underside compact without a pinched tail.
       const baseBlend = smoothStep01(Math.min(1, u / 0.28));
       const blendedBaseY = sharedRootY + (baseY - sharedRootY) * baseBlend;
       y = blendedBaseY + (topY - blendedBaseY) * verticalProgress
@@ -243,17 +255,57 @@ export function createRoseTarget(count: number): ParticleTarget {
   bodyCenterZ /= Math.max(1, flowerEnd - coreEnd);
   const correctionX = coreCenterX - bodyCenterX;
   const correctionZ = coreCenterZ - bodyCenterZ;
+  // Split the correction across both groups by mass ratio so the plant's
+  // overall center is preserved. Moving only the core would leave a net
+  // displacement that the final centering pass applies to every particle,
+  // drifting all petal roots off the shared axis.
+  const bodyShare = (flowerEnd - coreEnd) / flowerEnd;
   for (let index = 0; index < coreEnd; index += 1) {
-    arrays.positions[index * 3] -= correctionX;
-    arrays.positions[index * 3 + 2] -= correctionZ;
+    arrays.positions[index * 3] -= correctionX * bodyShare;
+    arrays.positions[index * 3 + 2] -= correctionZ * bodyShare;
   }
-  const bounds = centerPositions(arrays.positions);
+  for (let index = coreEnd; index < flowerEnd; index += 1) {
+    arrays.positions[index * 3] += correctionX * (1 - bodyShare);
+    arrays.positions[index * 3 + 2] += correctionZ * (1 - bodyShare);
+  }
+  centerPositions(arrays.positions);
+  // The shared petal root must sit on the plant axis. Plain bounds centering
+  // spans the asymmetric stem and leaves, so the tilted flower head leaves
+  // every petal root drifting off-axis. Measure the lowest flower band and
+  // translate the whole plant (shape-preserving, stem included) until all
+  // layers spring from one point on the axis.
+  let flowerYMin = Infinity;
+  let flowerYMax = -Infinity;
+  for (let index = 0; index < flowerEnd; index += 1) {
+    const y = arrays.positions[index * 3 + 1];
+    flowerYMin = Math.min(flowerYMin, y);
+    flowerYMax = Math.max(flowerYMax, y);
+  }
+  let rootSumX = 0;
+  let rootSumZ = 0;
+  let rootCount = 0;
+  const rootCutoff = flowerYMin + (flowerYMax - flowerYMin) * 0.09;
+  for (let index = 0; index < flowerEnd; index += 1) {
+    if (arrays.positions[index * 3 + 1] > rootCutoff) continue;
+    rootSumX += arrays.positions[index * 3];
+    rootSumZ += arrays.positions[index * 3 + 2];
+    rootCount += 1;
+  }
+  if (rootCount > 0) {
+    const shiftX = -rootSumX / rootCount;
+    const shiftZ = -rootSumZ / rootCount;
+    for (let offset = 0; offset < arrays.positions.length; offset += 3) {
+      arrays.positions[offset] += shiftX;
+      arrays.positions[offset + 2] += shiftZ;
+    }
+  }
+  const measured = calculateBounds(arrays.positions);
 
   return {
     ...arrays,
     kind: 'rose',
     count,
     id: 'rose-3d',
-    bounds,
+    bounds: { center: [0, 0, 0], radius: measured.radius },
   };
 }
