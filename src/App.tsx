@@ -152,13 +152,23 @@ function App() {
       ? '等待摄像头授权'
       : tracker.status === 'loadingModel'
         ? '正在加载手势模型'
-        : tracker.status === 'modelError'
-          ? '手势识别不可用'
-          : tracker.status === 'cameraError'
-            ? '摄像头启动失败'
-            : tracker.status === 'unsupported'
-              ? '设备不支持'
-              : '启用摄像头';
+        : tracker.status === 'recovering'
+          ? '正在恢复摄像头'
+          : tracker.status === 'modelError'
+            ? '手势识别不可用'
+            : tracker.status === 'cameraError'
+              ? '摄像头启动失败'
+              : tracker.status === 'unsupported'
+                ? '设备不支持'
+                : '启用摄像头';
+  const cameraStateClass = tracker.status === 'active'
+    ? 'is-active'
+    : tracker.isBusy
+      ? 'is-busy'
+      : tracker.errorMessage
+        ? 'is-error'
+        : '';
+  const canRetryTracker = tracker.status === 'cameraError' || tracker.status === 'modelError';
   const stageHint = busy ? '正在生成粒子' : images.length === 0 ? '等待第一张图片' : mode === 'rose' ? '玫瑰形态' : activeImage?.name ?? '图片形态';
 
   return (
@@ -185,9 +195,15 @@ function App() {
             <p>IMAGE TO PARTICLE</p>
           </div>
         </div>
-        <div className="live-status" aria-live="polite">
-          <span className={`status-dot ${tracker.handPresent ? 'is-live' : ''}`} />
-          <span>{stageHint}</span>
+        <div className="topbar-status">
+          <div className="live-status" aria-live="polite">
+            <span className={`status-dot ${tracker.handPresent ? 'is-live' : ''}`} />
+            <span>{stageHint}</span>
+          </div>
+          <div className={`camera-status ${cameraStateClass}`} aria-live="polite">
+            <span className="camera-state-dot" />
+            <span>{cameraLabel}</span>
+          </div>
         </div>
       </header>
 
@@ -208,8 +224,16 @@ function App() {
           <Flower2 size={17} />
           <span>玫瑰</span>
         </button>
-        <button type="button" className={`action-button ${tracker.enabled ? 'is-selected' : ''}`} title={tracker.errorMessage || cameraLabel} onClick={() => tracker.enabled || tracker.status === 'requesting' || tracker.status === 'loadingModel' ? tracker.stop() : void tracker.start()}>
-          {tracker.enabled ? <VideoOff size={17} /> : <Camera size={17} />}
+        <button
+          type="button"
+          className={`action-button ${tracker.enabled ? 'is-selected' : ''}`}
+          title={tracker.errorMessage || cameraLabel}
+          aria-label={cameraLabel}
+          aria-busy={tracker.isBusy}
+          disabled={tracker.isBusy}
+          onClick={() => { if (tracker.status === 'active') tracker.stop(); else void tracker.start(); }}
+        >
+          {tracker.isBusy ? <LoaderCircle className="spin" size={17} /> : tracker.enabled ? <VideoOff size={17} /> : <Camera size={17} />}
           <span>{cameraLabel}</span>
         </button>
       </section>
@@ -235,7 +259,29 @@ function App() {
         <span>LOCAL / REALTIME</span>
       </div>
 
-      {error && <div className="toast" role="alert">{error}<button type="button" onClick={() => setError('')} aria-label="关闭提示"><X size={15} /></button></div>}
+      {(tracker.errorMessage || error) && (
+        <div className="toast-stack">
+          {tracker.errorMessage && (
+            <div className="toast" role="alert">
+              <span className="toast-message">{tracker.errorMessage}</span>
+              <span className="toast-actions">
+                {canRetryTracker && (
+                  <button type="button" className="toast-action" onClick={() => void tracker.retry()}>重试</button>
+                )}
+                <button type="button" className="toast-close" onClick={tracker.dismissError} aria-label="关闭提示"><X size={15} /></button>
+              </span>
+            </div>
+          )}
+          {error && (
+            <div className="toast" role="alert">
+              <span className="toast-message">{error}</span>
+              <span className="toast-actions">
+                <button type="button" className="toast-close" onClick={() => setError('')} aria-label="关闭提示"><X size={15} /></button>
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       <video ref={tracker.videoRef} className="camera-feed" muted playsInline aria-hidden="true" />
     </main>

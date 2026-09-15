@@ -44,6 +44,15 @@ button { font: inherit; }
 .live-status { display: flex; align-items: center; gap: 8px; margin-top: 7px; color: rgba(245,240,236,0.62); font-size: 11px; letter-spacing: 0.05em; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(245,240,236,0.32); }
 .status-dot.is-live { background: #ef9a8e; box-shadow: 0 0 12px rgba(239,154,142,0.8); }
+.topbar-status { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.camera-status { display: flex; align-items: center; gap: 6px; color: rgba(245,240,236,0.5); font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; }
+.camera-state-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(245,240,236,0.3); }
+.camera-status.is-busy { color: rgba(245,240,236,0.74); }
+.camera-status.is-busy .camera-state-dot { background: #f0c98f; box-shadow: 0 0 8px rgba(240,201,143,0.6); }
+.camera-status.is-active { color: #ffd9d2; }
+.camera-status.is-active .camera-state-dot { background: #ef9a8e; box-shadow: 0 0 10px rgba(239,154,142,0.7); }
+.camera-status.is-error { color: #ffb4a8; }
+.camera-status.is-error .camera-state-dot { background: #ef8e7d; }
 
 .action-dock { position: absolute; z-index: 4; right: 32px; bottom: 32px; display: flex; gap: 8px; align-items: center; }
 .action-button { display: inline-flex; min-height: 38px; align-items: center; gap: 8px; padding: 0 13px; border: 1px solid rgba(245,240,236,0.2); border-radius: 6px; color: rgba(245,240,236,0.72); background: rgba(9,12,18,0.88); cursor: pointer; transition: border-color 160ms ease, color 160ms ease, background 160ms ease, transform 160ms ease; }
@@ -68,8 +77,13 @@ button { font: inherit; }
 .corner-note { position: absolute; z-index: 3; left: 32px; top: 50%; display: flex; align-items: center; gap: 8px; color: rgba(245,240,236,0.3); font-size: 9px; letter-spacing: 0.2em; writing-mode: vertical-rl; transform: translateY(-50%); pointer-events: none; }
 .note-line { width: 1px; height: 36px; background: rgba(245,240,236,0.3); }
 
-.toast { position: absolute; z-index: 5; top: 84px; left: 50%; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 40px); padding: 10px 12px 10px 14px; border: 1px solid rgba(239,154,142,0.5); border-radius: 5px; color: #ffe4df; background: #351d25; font-size: 12px; transform: translateX(-50%); }
-.toast button { display: grid; width: 24px; height: 24px; padding: 0; place-items: center; border: 0; color: inherit; background: transparent; cursor: pointer; }
+.toast-stack { position: absolute; z-index: 5; top: 84px; left: 50%; display: flex; width: max-content; max-width: calc(100% - 40px); flex-direction: column; align-items: center; gap: 8px; transform: translateX(-50%); }
+.toast { display: flex; width: 100%; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; border: 1px solid rgba(239,154,142,0.5); border-radius: 5px; color: #ffe4df; background: #351d25; font-size: 12px; }
+.toast-message { flex: 1 1 auto; }
+.toast-actions { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; }
+.toast-action { display: inline-flex; min-height: 24px; align-items: center; padding: 0 9px; border: 1px solid rgba(255,228,223,0.42); border-radius: 4px; color: inherit; background: transparent; font-size: 11px; cursor: pointer; }
+.toast-action:hover { border-color: rgba(255,228,223,0.8); background: rgba(255,228,223,0.08); }
+.toast-close { display: grid; width: 24px; height: 24px; padding: 0; place-items: center; border: 0; color: inherit; background: transparent; cursor: pointer; }
 
 .camera-feed { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
@@ -85,4 +99,6 @@ button { font: inherit; }
   .corner-note { display: none; }
   .brand-lockup h1 { font-size: 16px; }
   .live-status { margin-top: 5px; font-size: 10px; }
+  .camera-status { font-size: 10px; }
+  .toast-stack { top: 76px; }
 }

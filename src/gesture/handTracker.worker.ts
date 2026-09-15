@@ -1,14 +1,15 @@
 /// <reference lib="webworker" />
 
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
-
-type InitMessage = { type: 'init'; wasmPath: string; modelPath: string };
-type FrameMessage = { type: 'frame'; bitmap: ImageBitmap; timestamp: number };
-type StopMessage = { type: 'stop' };
+import type { WorkerInitMessage, WorkerRequest, WorkerResponse } from './inference';
 
 let landmarker: HandLandmarker | null = null;
 
-async function initialize({ wasmPath, modelPath }: InitMessage) {
+function post(message: WorkerResponse) {
+  self.postMessage(message);
+}
+
+async function initialize({ wasmPath, modelPath }: WorkerInitMessage) {
   const vision = await FilesetResolver.forVisionTasks(wasmPath, true);
   const create = (delegate: 'GPU' | 'CPU') => HandLandmarker.createFromOptions(vision, {
     baseOptions: { modelAssetPath: modelPath, delegate },
@@ -25,16 +26,16 @@ async function initialize({ wasmPath, modelPath }: InitMessage) {
     delegate = 'CPU';
     landmarker = await create('CPU');
   }
-  self.postMessage({ type: 'ready', delegate });
+  post({ type: 'ready', delegate });
 }
 
-self.onmessage = async (event: MessageEvent<InitMessage | FrameMessage | StopMessage>) => {
+self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const message = event.data;
   if (message.type === 'init') {
     try {
       await initialize(message);
     } catch (error) {
-      self.postMessage({ type: 'error', message: error instanceof Error ? error.message : 'Worker initialization failed' });
+      post({ type: 'error', message: error instanceof Error ? error.message : 'Worker initialization failed' });
     }
     return;
   }
@@ -48,7 +49,7 @@ self.onmessage = async (event: MessageEvent<InitMessage | FrameMessage | StopMes
     if (!landmarker) throw new Error('Hand tracker is not initialized');
     const result = landmarker.detectForVideo(message.bitmap, message.timestamp);
     message.bitmap.close();
-    self.postMessage({
+    post({
       type: 'result',
       landmarks: result.landmarks[0] ?? [],
       confidence: result.handednesses[0]?.[0]?.score ?? 0,
@@ -56,6 +57,6 @@ self.onmessage = async (event: MessageEvent<InitMessage | FrameMessage | StopMes
     });
   } catch (error) {
     message.bitmap.close();
-    self.postMessage({ type: 'frameError', message: error instanceof Error ? error.message : 'Hand tracking failed' });
+    post({ type: 'frameError', message: error instanceof Error ? error.message : 'Hand tracking failed' });
   }
 };
